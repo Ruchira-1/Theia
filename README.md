@@ -17,3 +17,6 @@ For PyTorch programs call Theia() before the training loop:
 ```
 Theia.check(train_data, test_data, model, loss_fun, optimizer, batch_size, problem_type,input_type)
 ```
+
+This repository contains:
+[Benchmark -- 40 buggy Stack Overflow Programs] (https://github.com/anoau/Theia/tree/main/SOF)
