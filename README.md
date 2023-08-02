@@ -19,4 +19,4 @@ Theia.check(train_data, test_data, model, loss_fun, optimizer, batch_size, probl
 ```
 
 This repository contains:
-[Benchmark -- 40 buggy Stack Overflow Programs] (https://github.com/anoau/Theia/tree/main/SOF)
+* Benchmark -- 40 buggy Stack Overflow Programs (https://github.com/anoau/Theia/tree/main/SOF)
