@@ -12,12 +12,20 @@ def get_layer_name(model):
               change_name.append('conv2d')
               layer_num.append(l)
               l=l+1
+        elif i.find('conv1d')!=-1:
+              change_name.append('conv1d')
+              layer_num.append(l)
+              l=l+1
         elif i.find('activation') !=-1:
               change_name.append('activation')
               layer_num.append(l)
               l=l+1
         elif i.find('batchnormalization')!=-1:
               change_name.append('dropout')
+              layer_num.append(l)
+              l=l+1
+        elif i.find('max_pooling1d')!=-1:
+              change_name.append('maxpooling1d')
               layer_num.append(l)
               l=l+1
         elif i.find('max_pooling2d')!=-1:
@@ -54,7 +62,7 @@ def get_layer_filters(model):
     pool_strides=[]
     l=1
     for layer in model.layers:
-        if layer.name.find('conv2d')!=-1 :
+        if layer.name.find('conv')!=-1 :
             fil.append(layer.filters) 
             num_layer.append(l)
             fil_size.append(layer.kernel_size)
