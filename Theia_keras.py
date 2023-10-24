@@ -191,11 +191,11 @@ class Theia(Callback):
               
        #.........................................................................................................................                    
       #   #Check learning rate
-        if 'adadelta' in str(self.model.optimizer):
-              if self.model.optimizer.learning_rate != 1.0:
-                    mes.append('For Adadelta optimizer use learning rate 1.0')
-                    c+=1
-        elif self.model.optimizer.learning_rate >=0.00001 and  self.model.optimizer.learning_rate <= 0.01:
+        # if 'adadelta' in str(self.model.optimizer):
+        #       if self.model.optimizer.learning_rate != 1.0:
+        #             mes.append('For Adadelta optimizer use learning rate 1.0')
+        #             c+=1
+        if self.model.optimizer.learning_rate >=0.00001 and  self.model.optimizer.learning_rate <= 0.01:
           pass
         elif self.model.optimizer.learning_rate > 0.01:
               mes.append('Decrease the learning rate') 
@@ -502,32 +502,32 @@ class Theia(Callback):
         if check==1:
           if channel == 3:
             for i in range(len(fil)):
-                if fil[i] in range(32,513):
+                if fil[i] in range(16,513):
                     pass
-                elif fil[i] < 32:
-                    message.append('Layer '+ str(num_layer[i]) +' : Increase the number of filters --> preferred between 32-512')
+                elif fil[i] < 16:
+                    message.append('Layer '+ str(num_layer[i]) +' : Increase the number of filters --> preferred between 16-512')
                     c+=1
                 elif fil[i] > 512:
-                    message.append('Layer '+ str(num_layer[i]) +' : Decrerase the number of filters --> preferred between 32-512')
+                    message.append('Layer '+ str(num_layer[i]) +' : Decrerase the number of filters --> preferred between 16-512')
                     c+=1
 
           if channel == 1:
             
             for i in range(len(fil)):
-                if fil[i] in range(6,65):
+                if fil[i] in range(6,256):
                     pass
                 elif fil[i] < 6:
-                    message.append('Layer '+ str(num_layer[i]) +' : Increase the number of filters --> preferred between 6-64')
+                    message.append('Layer '+ str(num_layer[i]) +' : Increase the number of filters --> preferred between 6-256')
                     c+=1
-                elif fil[i] > 64:
-                    message.append('Layer '+ str(num_layer[i]) +' : Decrease the number of filters --> preferred between 6-64')
+                elif fil[i] > 256:
+                    message.append('Layer '+ str(num_layer[i]) +' : Decrease the number of filters --> preferred between 6-256')
                     c+=1
 
         
         
         else:
             if channel == 3:
-              if fil[0] < 32:
+              if fil[0] < 16:
                   message.append('Layer '+ str(num_layer[0]) +' : Increase the number of filters --> preferred between 32-512')
                   ck=1
                   c+=1
@@ -537,27 +537,27 @@ class Theia(Callback):
                   c+=1
               for i in range(1,len(fil)):
                     
-                    if fil[i] not in range(32,513):
+                    if fil[i] not in range(16,513):
                       
-                      message.append('Layer '+str(num_layer[i])+' : Increase the number of filters --> preferred between 32-512')
+                      message.append('Layer '+str(num_layer[i])+' : Increase the number of filters --> preferred between 16-512')
                       c+=1
                     elif ck == 0:
-                      message.append('Layer '+str(num_layer[i])+' : Increase number of filters while going deep --> preferred between 32-512')
+                      message.append('Layer '+str(num_layer[i])+' : Increase number of filters while going deep --> preferred between 16-512')
                       c+=1 
-            if channel == 1 and 'conv2d' in change_name[0]:
+            if channel == 1 and 'conv2d' in change_name[0] or 'conv1d' in change_name[0]:
               
-              if fil[0] not in range(8,65):
-                  message.append('Layer '+ str(num_layer[i]) +' : Increase the number of filters --> preferred between 8-64')
+              if fil[0] not in range(6,256):
+                  message.append('Layer '+ str(num_layer[i]) +' : Increase the number of filters --> preferred between 6-256')
               for i in range(1,len(fil)):
                     
                           
-                    if fil[i] not in range(8,65):
+                    if fil[i] not in range(6,256):
                         print('here')
-                        message.append('Layer '+str(num_layer[i])+' : Increase number of filters while going deep --> preferred between 8-64') 
+                        message.append('Layer '+str(num_layer[i])+' : Increase number of filters while going deep --> preferred between 6-256') 
                         c+=1
                     else:
                         print('now here')
-                        message.append('Layer '+str(num_layer[i])+' : Increase number of filters while going deep --> preferred between 8-64')
+                        message.append('Layer '+str(num_layer[i])+' : Increase number of filters while going deep --> preferred between 6-256')
                         c+=1
         res = sorted(message, key = lambda x: int(x.split()[1]))
         for i in res:
