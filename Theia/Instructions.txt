@@ -1,0 +1,49 @@
+Prerequisites for using Theia:
+Python 3.6.9
+Keras 2.3.0
+Keras-Preprocessing 1.1.2
+Keras-Applications 1.0.8
+Tensorflow 2.1.0
+numpy 1.19.5
+pandas 1.1.5
+scikit-learn 0.24.2
+PyTorch 1.13.1
+
+Instructions for using Theia:
+
+The project assumes a Python 3.X is installed in the user system.
+Additionally, the project requires several packages which are listed in requirements.txt file. 
+Below, we provide a detailed guide on how to set up a virtual environment and install the necessary packages for running the project:
+
+1. Clone the project in your system.
+
+2. Open terminal and navigate to a folder named 'Theia'.
+
+3. Create a virtual environment. Run on terminal:
+
+python3 -m venv theia
+
+4. Activate the environment:
+source theia/bin/activate
+
+5. Install required packages (requirements.txt is for Keras, please make the changes for PyTorch framework using the PyTorch 1.13.1) :
+pip install -r requirements.txt
+
+6. For Keras framework:
+	-- To use Theia, you need to add our callback present in 'Theia_keras.py' file as a subclass 	 in your 'keras.callbacks.py' file.
+	-- After adding it, you can pass our callback Theia() to the .fit() method for the Keras model.
+	-- Theia has 5 arguments: Theia(train_inputs, test_inputs, batch_size, problem_type,input_type)
+	-- For classification task, use problem_type = 1 and regression task, use problem_type = 1.
+	-- For image dataset, use input_type = 1 for RGB images or input_type = 0 for grayscale images. 
+	-- For tabular dataset, use input_type = 0.
+	-- For example, to reproduce the results of motivation example (multi-class classification with RGB images as input)
+            add callbacks = [Theia(train_data, test_data, batch_size, 1, 1)] 
+
+7. For PyTorch framework:
+	-- Save Theia_torch.py in the same directory where the designed model is saved.
+	-- Call Theia() before the training loop as follows:
+		Theia.check(train_data, test_data, model, loss_fun, optimizer, batch_size, problem_type,input_type)
+	-- For classification task, use problem_type = 1 and regression task, use problem_type = 1.
+	-- For image dataset, use input_type = 1 for RGB images or input_type = 0 for grayscale images. 
+	-- For tabular dataset, use input_type = 0.
+ 
