@@ -5,7 +5,7 @@ This repository contains source code of Theia, benchmark used for empirical eval
 .
 ├── SOF                                    # Contains 40 buggy programs obtained from Stack Overflow 
 ├── Theia                                  # Source code of Theia
-    ├── Theia_keras.py                     # Contains callback for keras framework
+    ├── Theia_keras.py                     # Contains callback for Keras framework
     ├── Theia_torch.py                     # Contains callback for PyTorch framework
     ├── Instructions.txt                   # Intructions for using Theia
     └── requirements.txt                   # Dependency and Python virutal environment information
