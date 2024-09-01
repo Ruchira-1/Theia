@@ -1,95 +1,89 @@
-import numpy as np
-from PIL import Image
 import torch
-from torchvision.transforms import ToTensor
-from torchvision import datasets,transforms
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data import DataLoader
-from torch.autograd import Variable
-#from keras.datasets import mnist
-from torchvision import datasets
+import numpy as np
+import torch.nn.functional as F
+from sklearn.datasets import make_classification
+import sys
+sys.path.append('../Torch Programs')
 
+# Generate synthetic image data
+num_samples = 1000
+image_height = 145
+image_width = 200
+num_channels = 1  # Grayscale image
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+X, y = make_classification(n_samples=num_samples, n_features=image_height * image_width * num_channels,
+                           n_classes=2, n_clusters_per_class=1, random_state=42)
+
+# Reshape the data into image format
+X_images = X.reshape(-1, num_channels, image_height, image_width)
+
+# Convert data to PyTorch tensors
+X_tensor = torch.tensor(X_images, dtype=torch.float32)
+y_tensor = torch.tensor(y, dtype=torch.long)
+
+# Define a simple CNN model
 class Hl_Model(nn.Module):
-
-    torch.cuda.set_device(0)
+    
+    # torch.cuda.set_device(0)
 
     def __init__(self):
         super().__init__()
-
-        self.conv1 = nn.Conv2d(1, 32, 3, stride=2)
-        self.conv2 = nn.Conv2d(32, 64, 3, stride=2)
-        self.conv3 = nn.Conv2d(64, 128, 3, stride=2)
-        self.conv4 = nn.Conv2d(128, 256, 3, stride=2)
-
-        x = torch.randn(145,200).view(-1,1,145,200)
-        self._to_linear = None
-        self.convs(x)
-    
-        self.fc1 = nn.Linear(self._to_linear, 128, bias=True)
-        self.fc2 = nn.Linear(128, 3)
-
-    def convs(self, x):
-
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        x = F.max_pool2d(F.relu(self.conv4(x)), (2, 2), stride=2)
-
-        if self._to_linear is None:
-            self._to_linear = x[0].shape[0]*x[0].shape[1]*x[0].shape[2]
-        return x
-
+       
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 32, 3, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 3, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(64, 128, 3, stride=2),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=(2, 2), stride=(2, 2)),
+            nn.Conv2d(128, 256, 3, stride=2),
+            nn.ReLU()
+         )
+        self.classifier =  nn.Sequential(       
+            nn.Flatten(),
+            nn.Linear(3840, 128),  # Assuming input size is (145, 200)
+            nn.ReLU(),
+            nn.Linear(128, 3),
+            nn.Softmax(dim=1)
+        )
 
     def forward(self, x):
-        x = self.convs(x)
-        x = x.view(-1, self._to_linear)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return F.softmax(x, dim=1)
+           
+        x = self.features(x)
+        x = self.classifier(x)
+        return x
 
+# Create an instance of the model
+model = Hl_Model()
 
+# Define loss function and optimizer
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.05)
 
-def train(net, train_fold_x, train_fold_y):
-    
-    optimizer = optim.Adam(net.parameters(), lr=0.05)
-    loss_fun = nn.CrossEntropyLoss()
-    BATCH_SIZE = 5
-    EPOCHS = 50
-    for epoch in range(EPOCHS):
-        for i in tqdm(range(0, len(train_fold_x), BATCH_SIZE)):
-
-            batch_x = train_fold_x[i:i+BATCH_SIZE].view(-1, 1, 145, 200)
-            batch_y = train_fold_y[i:i+BATCH_SIZE]
-        
-            batch_x, batch_y = batch_x.to(device), batch_y.to(device)
-        
-            optimizer.zero_grad()
-            outputs = net(batch_x)
-
-            batch_y = batch_y.long()
-            loss = loss_func(outputs, batch_y)
-
-            loss.backward()
-            optimizer.step()
-        
-        print(f"Epoch: {epoch} Loss: {loss}")
-def test(net, test_fold_x, test_fold_y):
-    
-    test_fold_x.to(device)
-    test_fold_y.to(device)
-
+# Training loop
+num_epochs = 10
+batch_size = 32
+for epoch in range(num_epochs):
+    running_loss = 0.0
     correct = 0
     total = 0
-    with torch.no_grad():
-        for i in tqdm(range(len(test_fold_x))):
-            real_class = torch.argmax(test_fold_y[i]).to(device)
-            net_out = net(test_fold_x[i].view(-1, 1, 145, 200).to(device))
-            pred_class = torch.argmax(net_out)
+    for i in range(0, len(X_tensor), batch_size):
+        inputs = X_tensor[i:i+batch_size]
+        labels = y_tensor[i:i+batch_size]
 
-            if pred_class == real_class:
-                correct += 1
-            total +=1
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+         # Calculate accuracy
+        _, predicted = torch.max(outputs, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+    # epoch_loss = running_loss / len(X_tensor)
+    epoch_accuracy = 100 * correct / total
+    # Print training loss per epoch
+    print(f'Epoch [{epoch+1}/{num_epochs}], Loss:  {loss.item():.4f}, Accuracy: {epoch_accuracy:.2f}%')
