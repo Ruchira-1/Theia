@@ -28,7 +28,7 @@ The 40 buggy programs, along with the patches applied manually following the lin
 The 40 normal programs obtained after applying the patches used as ground truth, along with the patches applied manually following the line numbers and fix suggestions provided by Theia and NeuraLint, are under the directory  [normal_models_with_patch](https://github.com/anoau/Theia/tree/main/normal_models_with_patch). Each normal program, along with its patches, is stored in a folder named after the Stack Overflow post handle. If Theia or NeuraLint does not report any bug, then the program after the fix is not included in the folder. These programs are used to report the performance of the models before/after applying patches in Section 5.3.4 of the paper.
 
 # Mapping between Dataset Characteristics and Structural Bugs
-The 105 Stack Overflow posts with non-crash bugs obtained from dataset of bugs released by Humbatova et al. [62] used for mapping dataset characteristics with structural bugs are provided in [105_mapping_posts.xlsx](https://github.com/anoau/Theia/blob/main/105_mapping_posts.xlsx)(105_mapping_posts.xlsx).
+The 105 Stack Overflow posts with non-crash bugs obtained from dataset of bugs released by Humbatova et al. [62] used for mapping dataset characteristics with structural bugs are provided in [105_mapping_posts.xlsx](https://github.com/anoau/Theia/blob/main/105_mapping_posts.xlsx).
 
 #  Manual Labeling
 All the files associated with our manual labeling process are provided in  [Manual_Labeling_for_Mapping.xlsx](https://github.com/anoau/Theia/blob/main/Manual_Labeling_for_Mapping.xlsx).
