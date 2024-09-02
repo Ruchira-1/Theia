@@ -1,4 +1,13 @@
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+
+import sys
+import time
+import numpy as np
+
 
 def get_layer_name(model):
     names = []
@@ -87,12 +96,14 @@ def dense_layer(model):
     dense_count = 0
     dense_units = []
     dense_num = []
+    dense_input = []
     dc = 1
     for layer in model.layers:
         if layer.name.find('dense')!=-1 :
             dense_num.append(dc)
             dense_units.append(layer.units) 
             dense_count +=1
+           
         dc+=1
     return dense_count, dense_units, dense_num
       
@@ -117,17 +128,14 @@ class Theia(Callback):
         start_time = time.time()
         layer_name, change_name, layer_number = get_layer_name(self.model)
         if change_name[0]=='conv1d':
-            image_row = self.model.layers[0].input_shape[1]
-            image_column = self.model.layers[0].input_shape[2]
+           
             channel = 0
               
         if change_name[0]=='conv2d':
-          image_row = self.model.layers[0].input_shape[1]
-          image_column = self.model.layers[0].input_shape[2]
-          channel = self.model.layers[0].input_shape[3]
+        
+            channel = self.model.layers[0].input_shape[3]
         if change_name[0] == 'dense':
-              image_row=28
-              image_column = 28
+             
               channel =1
         
         
@@ -191,16 +199,13 @@ class Theia(Callback):
               
        #.........................................................................................................................                    
       #   #Check learning rate
-        if 'adadelta' in str(self.model.optimizer):
-              if self.model.optimizer.learning_rate != 1.0:
-                    mes.append('For Adadelta optimizer use learning rate 1.0')
-                    c+=1
-        elif self.model.optimizer.learning_rate >=0.00001 and  self.model.optimizer.learning_rate <= 0.01:
+       
+        if self.model.optimizer.learning_rate >=0.0001 and  self.model.optimizer.learning_rate <= 0.01:
           pass
         elif self.model.optimizer.learning_rate > 0.01:
               mes.append('Decrease the learning rate') 
               c+=1
-        elif self.model.optimizer.learning_rate < 0.00001:
+        elif self.model.optimizer.learning_rate < 0.0001:
               mes.append('Increase the learning rate')
               c+=1 
       #.........................................................................................................................                          
@@ -210,94 +215,147 @@ class Theia(Callback):
         act = 0
         sub = 'relu'
         activation=''
-        print('This is change_name',change_name)
+        if 'dense' in change_name[-1]:
+                  il = len(change_name)-1
+        elif 'activation' in change_name[-1]:
+                   il = len(change_name)-2
+       
         for layer in self.model.layers:
             d += 1
-            if i < (len(change_name)-1) :
-                if 'dense' in change_name[0]:
-                  if 'dense'  in change_name[i] :
+            
+            if i < (il) :
+                if 'dropout' in change_name[0]:
+                      pass
+                    
+                elif 'dense' in change_name[0]:
+                  
+                  if 'dense'  in change_name[i] and 'batch_normalization' in change_name[i+1]: 
+                      
+                      if str(layer.activation).find('linear')==-1 and 'activation' in change_name [i+2] :
+                              message.append('Layer ' + str(layer_number[i+1]) + ' : Multiple activation function --> Use activation once')
+                              c+=1
+
+                    
+                      elif str(layer.activation).find('linear')!=-1 and 'activation' in change_name [i+2]:
+                            
+                          act = 1
+                      elif str(layer.activation).find('linear')!=-1 and 'activation' not in change_name [i+2] :
+                              message.append('Layer ' + str(layer_number[i]) +' : Missing activation function --> Add non-linear activation function')
+                              c+=1
+                      
+                  elif 'dense'  in change_name[i] :
                  
                       activation = str(layer.activation)
-                      if 'batchnormalization' not in change_name[i+1]:
-                          message.append('Layer ' + str(layer_number[i]) + ' : Missing Batch Normalization --> Add Batch Normanlization after this layer')
+                     
+                      if 'batch_normalization' not in change_name[i+1]:
+                          message.append('Layer ' + str(layer_number[i]) + ' : Missing Batch Normalization --> Add Batch Normalization after this layer')
                           c+=1
-                      if 'activation' in change_name [i+1]:
-                          act = 1
-                      elif 'activation' not in change_name [i+1]:
-                          message.append('Layer ' + str(layer_number[i]) +' : Missing activation function --> Add activation function')
-                          c+=1
-                  elif act==1:
-                          act=0
-                  
-                  elif 'activation' in change_name[i] :
-                          message.append('Layer ' + str(layer_number[i]) + ' : Multiple activation function --> Use activation once')
+                      if str(layer.activation).find('linear')==-1 and 'activation' in change_name [i+1] :
+                              message.append('Layer ' + str(layer_number[i+1]) + ' : Multiple activation function --> Use activation once')
+                              c+=1
 
-                if 'conv2d' in change_name[0]:
-                  if 'conv2d' in change_name [i]:
-                          activation = str(layer.activation)
-                          if 'batchnormalization' not in change_name[i+1]:
-                              message.append('Layer ' + str(layer_number[i]) + ' : Missing Batch Normalization --> Add Batch Normanlization after this layer')
-                              c+=1
-                          if 'activation' in change_name [i+1]:
-                                act = 1
-                              
-                          elif 'activation' not in change_name [i+1] and 'activation' not in change_name [i+2]:
-                              message.append('Layer ' + str(layer_number[i]) +' : Missing activation function --> Add activation function')
-                              c+=1
-                          elif act==1 and str(layer.activation) in sub:
-                                act=0
-                              
-                          elif act==1 and str(layer.activation) not in sub:
-                              message.append('Layer ' + str(layer_number[i]) +' : Change activation function --> preferred ReLU')
-                              c+=1
-                          elif 'activation' in change_name[i] :
-                              message.append('Layer ' + str(layer_number[i]) + ' : Multiple activation function --> Use activation once')
-                              c+=1
-                  elif 'dense'  in change_name[i] :
-                      activation = str(layer.activation)
-                      # if 'batchnormalization' not in change_name[i+1]:
-                      #     message.append('Layer ' + str(layer_number[i]) + ' : Missing Batch Normalization --> Add Batch Normanlization after this layer')
-                      #     c+=1
-                      if 'activation' in change_name [i+1]:
+                     
+                      elif str(layer.activation).find('linear')!=-1 and 'activation' in change_name [i+1]:
+                            
                           act = 1
-                      elif 'activation' not in change_name [i+1]:
-                          message.append('Layer ' + str(layer_number[i]) +' : Missing activation function --> Add activation function')
-                          c+=1
-                  elif act==1:
-                          act=0
-                  
-                  elif 'activation' in change_name[i] :
-                          message.append('Layer ' + str(layer_number[i]) + ' : Multiple activation function --> Use activation once')
-                if 'conv1d' in change_name[0]:
-                      if 'conv1d' in change_name [i]:
-                          activation = str(layer.activation)
-                          if 'batchnormalization' not in change_name[i+1]:
-                              message.append('Layer ' + str(layer_number[i]) + ' : Missing Batch Normalization --> Add Batch Normanlization after this layer')
+                      elif str(layer.activation).find('linear')!=-1 and 'activation' not in change_name [i+1] :
+                              message.append('Layer ' + str(layer_number[i]) +' : Missing activation function --> Add non-linear activation function')
                               c+=1
-                          if 'activation' in change_name [i+1]:
-                                act = 1
-                              
-                          elif 'activation' not in change_name [i+1]  and 'activation' not in change_name [i+2]:
-                              message.append('Layer ' + str(layer_number[i]) +' : Missing activation function --> Add activation function')
+                  
+                      
+                      
+                p = 0      
+                if 'conv2d' in change_name[0] or 'conv1d' in change_name[0]:
+                  if ('conv2d'  in change_name[i] or 'conv1d' in change_name[i]) and 'batch_normalization' in change_name[i+1]: 
+                      
+                      activation = str(layer.activation)
+                    
+                      if str(layer.activation).find('linear')==-1 and 'activation' in change_name [i+2] :
+                              message.append('Layer ' + str(layer_number[i+1]) + ' : Multiple activation function --> Use activation once')
+                              c+=1
+
+                    
+                      elif str(layer.activation).find('linear')!=-1 and 'activation' in change_name [i+2]:
+                            
+                          act = 1
+                      elif str(layer.activation).find('linear')!=-1 and 'activation' not in change_name [i+2] :
+                              message.append('Layer ' + str(layer_number[i]) +' : Missing activation function --> Add non-linear activation function')
+                              c+=1
+                  elif 'conv2d' in change_name [i] or  'conv1d' in change_name[i]:
+                         
+                            if 'batch_normalization' not in change_name[i+1]:
+                              message.append('Layer ' + str(layer_number[i]) + ' : Missing Batch Normalization --> Add Batch Normalization after this layer')
                               c+=1
                          
-                          # elif act==1 and str(layer.activation) not in sub:
-                          #     message.append('Layer ' + str(layer_number[i]) +' : Change activation function --> preferred ReLU')
-                          #     c+=1
-                          elif 'activation' in change_name[i+1] and  'activation' in change_name[i+2]:
-                              message.append('Layer ' + str(layer_number[i]) + ' : Multiple activation function --> Use activation once')
+                            if str(layer.activation).find('linear')==-1 and 'activation' in change_name [i+1]  :
+                                message.append('Layer ' + str(layer_number[i+1]) + ' : Multiple activation function --> Use activation once')
+                                c+=1
+
+                       
+                            elif str(layer.activation).find('linear')!=-1 and 'activation' in change_name [i+1] :
+                              act = 1
+                            elif str(layer.activation).find('linear')!=-1 and 'activation' not in change_name [i+1] :
+                                    message.append('Layer ' + str(layer_number[i]) +' : Missing activation function --> Add non-linear activation function')
+                                    c+=1
+                               
+                  
+
+                  elif 'dense'  in change_name[i] :
+                      
+                      if 'dense'  in change_name[i] and 'batch_normalization' in change_name[i+1]: 
+                       
+                        activation = str(layer.activation)
+                        
+                        if str(layer.activation).find('linear')==-1 and ('activation' in change_name [i+2]) :
+                                message.append('Layer ' + str(layer_number[i+1]) + ' : Multiple activation function --> Use activation once')
+                                c+=1
+
+                       
+                        elif str(layer.activation).find('linear')!=-1 and ('activation' in change_name [i+2]):
+                              
+                            act = 1
+                        elif str(layer.activation).find('linear')!=-1 and ('activation' not in change_name [i+2]) :
+                                message.append('Layer ' + str(layer_number[i]) +' : Missing activation function --> Add non-linear activation function')
+                                c+=1
+                      
+                      elif 'dense'  in change_name[i] :
+                 
+                          activation = str(layer.activation)
+                        
+                          if 'batch_normalization' not in change_name[i+1]:
+                              message.append('Layer ' + str(layer_number[i]) + ' : Missing Batch Normalization --> Add Batch Normalization after this layer')
                               c+=1
-            i+=1       
+                          if str(layer.activation).find('linear')==-1 and 'activation' in change_name [i+1] :
+                                  message.append('Layer ' + str(layer_number[i+1]) + ' : Multiple activation function --> Use activation once')
+                                  c+=1
+
+                          elif str(layer.activation).find('linear')!=-1 and 'activation' in change_name [i+1]:
+                                
+                              act = 1
+                          elif str(layer.activation).find('linear')!=-1 and 'activation' not in change_name [i+1] :
+                                  message.append('Layer ' + str(layer_number[i]) +' : Missing activation function --> Add non-linear activation function')
+                                  c+=1
+                  
+                      
+                  elif act==1:
+                          act=0
+                  
+                 
+            i =i+1  
        #.........................................................................................................................                    
       #   #Mismatch between number of classes, last layer activation & loss function
         for layer in self.model.layers:
-              print('Layer name is',layer.name)
-              print('Again layer name',layer_name)
-              print('Dense_units',dense_units)
+              
               if layer.name == layer_name[-1] :
                     if dense_units[-1] ==1 and self.problem_type==0:
+                          
                           if 'linear' not in str(layer.activation) :
                                 message.append('Layer ' + str(layer_number[-1]) +' : Regression problem --> Use linear activation')
+                          if str(self.model.loss).find('mse') !=-1 or str(self.model.loss).find('mae') !=-1 or str(self.model.loss).find('mean_squared_error') !=-1 or str(self.model.loss).find('mean_absolute_error') !=-1 :
+                                pass
+                          else:        
+                                mes.append('Change loss function --> Use mean_squared_error or mean_absolute_error ')
+                                c+=1
                     elif dense_units[-1] >= 2 and self.problem_type ==1:
                           if 'softmax' in str(layer.activation):
                                 if str(self.model.loss).find('categorical_crossentropy') !=-1:
@@ -330,43 +388,64 @@ class Theia(Callback):
                                   message.append('Layer ' + str(layer_number[-1]) +' : Wrong activation function --> Binary classification use sigmoid')
                                   mes.append('Change loss function --> Use binary_crossentropy')
                                   c+=1
+              
      #.........................................................................................................................                  
       #Check dropout 
-        i=0                       
+        i=0   
+        cv =0   
+        cnt = 0    
+        fla = 0             
         for i in range(0,len(change_name)-2):
-              print('CHecking value of i',i)
+              
               if 'dense' in change_name[i]:
-                  j=i+1
-                  dr = 0
-                  while 'dense' not in change_name[j]:
-                        if 'dropout' in change_name[j]:
-                              dr+=1
-                              
-                        j+=1
-                  if dr > 1 :
-                        message.append('Layer ' + str(layer_number[j-1]) +' : Redundant Dropout --> Remove Dropout ****')
-                        c+=1
-                  elif dr ==0: 
-                        message.append('Layer ' + str(layer_number[j-1]) +' : Missing Dropout --> Add Dropout')
-                        c+=1
+                  cnt +=1
+                  if cnt<3:
+                    j=i+1
+                    dr = 0
+                    while 'dense' not in change_name[j]:
+                          if 'dropout' in change_name[j]:
+                                dr+=1
+                                
+                          j+=1
+                    if dr > 1 :
+                          message.append('Layer ' + str(layer_number[j-1]) +' : Redundant Dropout --> Remove Dropout ****')
+                          c+=1
+                    elif dr ==0: 
+                          message.append('Layer ' + str(layer_number[j-1]) +' : Missing Dropout --> Add Dropout')
+                          c+=1
               if  'conv2d' in change_name[i]:
                   print('Thus is i',i)
                   j=i+1
                   dr = 0
-                  while  'maxpooling2d' not in change_name[j]:
-                        
-                        if 'dropout' in change_name[j]:
-                              dr+=1
-                        if 'flatten' in change_name[j]:
-                           break     
-                        j+=1
+                  if 'conv2d' in change_name[j] or 'conv2d' in change_name[j+1] :
+                        pass
+                  else: 
+                    while  'maxpooling2d' not in change_name[j]:
+                          
+                          if 'dropout' in change_name[j]:
+                                dr+=1
+                                
+                          if 'flatten' in change_name[j]:
+                            fla = 1
+                            break     
+                          j+=1
+                          cv=1
                   
-                  if dr >= 1 and 'dropout' in change_name[j+1] :
-                        message.append('Layer ' + str(layer_number[j+1]) +' : Redundant Dropout --> Remove Dropout *')
-                        c+=1
-                  elif dr ==0 and 'dropout' not in change_name[j]: 
-                        message.append('Layer ' + str(layer_number[j]) +' : Missing Dropout --> Add Dropout **')
-                        c+=1
+                          
+                    if dr >= 1 and 'dropout' in change_name[j+1] :
+                          message.append('Layer ' + str(layer_number[j+1]) +' : Redundant Dropout --> Remove Dropout ')
+                          c+=1
+                    elif dr ==0 and 'dropout' not in change_name[j]: 
+                          message.append('Layer ' + str(layer_number[j-1]) +' : Missing Dropout --> Add Dropout')
+                          cv=0
+                          c+=1
+
+              if 'maxpooling2d' in change_name[i]:
+                          if 'dropout' in change_name[i+1]:
+                              dr = 3
+                              print('Inside dropout')
+                              message.append('Layer ' + str(layer_number[j+1]) +' : Remove Dropout ')
+                              c+=1
               if  'conv1d' in change_name[i]:
                   
                   j=i+1
@@ -376,16 +455,18 @@ class Theia(Callback):
                         if 'dropout' in change_name[j]:
                               dr+=1
                         if 'flatten' in change_name[j]:
-                           break     
+                            fla = 1
+                            break     
                         j+=1
-                 
-                  if dr >= 1 and 'dropout' in change_name[j-1] :
-                        message.append('Layer ' + str(layer_number[j-1]) +' : Redundant Dropout --> Remove Dropout *')
+                  if fla == 1:
+                        pass
+                  elif dr >= 1 and 'dropout' in change_name[j-1] :
+                        message.append('Layer ' + str(layer_number[j-1]) +' : Redundant Dropout --> Remove Dropout ')
                         c+=1
                   elif dr ==0 and 'dropout' not in change_name[j]: 
-                        message.append('Layer ' + str(layer_number[j]) +' : Missing Dropout --> Add Dropout **')
+                        message.append('Layer ' + str(layer_number[j]) +' : Missing Dropout --> Add Dropout')
                         c+=1
-              i=j+1  
+              # i=i+1  
         #.........................................................................................................................                              
       #   #Trade-off between convolution layer and fully connected layer
         co = 0
@@ -399,19 +480,19 @@ class Theia(Callback):
                 elif 'dense' in change_name[l]:
                     de+=1 
                     den_layer.append(layer_number[l])
-                
+                elif 'maxpooling2d' in change_name[l] or 'flatten' in change_name[l]:
+                      ml = layer_number[l]
           
             if co < 3 and de >3:
-                message.append('Layer '+ str(conv_layer) +' : Increase number of convolution layers')
+                message.append('Layer '+ str(ml) +' : Increase number of convolution-pooling layers')
                 message.append('Layer '+ str(den_layer[-2]) + ' : Decrease number of hidden dense layers --> preferred one or two') 
                 c+=1
             elif co < 3:
-                #print('Layer '+ str(conv_layer) +' : Increase number of convolution layers')
-                message.append('Layer '+ str(conv_layer) +' : Increase number of convolution layers')
+                message.append('Layer '+ str(ml) +' : Increase number of convolution-pooling layers')
                 
                 c+=1
             elif de >3:
-                #print('Layer: '+ str(den_layer[-2]) + ' Decrease number of hidden dense layers preferred one or two')
+                
                 message.append('Layer '+ str(den_layer[-2]) + ' : Decrease number of hidden dense layers --> preferred one or two')
                 c+=1
             
@@ -425,11 +506,11 @@ class Theia(Callback):
                     den_layer.append(layer_number[l])
                     
              if co < 2 and de > 3:
-                 message.append('Layer '+ str(conv_layer) +' : Increase number of convolution layers')
+                 message.append('Layer '+ str(conv_layer) +' : Increase number of convolution-pooling layers')
                  message.append('Layer '+ str(den_layer[-2]) + ' : Decrease number of hidden dense layers --> preferred one or two') 
                  c += 1
              elif co < 2:
-                 message.append('Layer '+ str(conv_layer) +' : Increase number of convolution layers')
+                 message.append('Layer '+ str(conv_layer) +' : Increase number of convolution-pooling layers')
                  c+=1
                
              elif de>3:
@@ -437,16 +518,36 @@ class Theia(Callback):
                 message.append('Layer '+ str(den_layer[-2]) + ' : Decrease number of hidden dense layers --> preferred one or two')   
                 c += 1 
         #.........................................................................................................................                   
-          c+=1 
-
+      #Down-sampling with pooling
+        pl =0
+        co = 0
+        if 'conv2d'  in change_name[0]:
+            for l in range(len(change_name)):
+                if 'conv2d' in change_name[l]:
+                    co +=1
+                    conv_layer = layer_number[l]
+                
+                if 'maxpooling2d' in change_name[l]:
+                    if co > 4:
+                        message.append('Layer '+ str(conv_layer) +' : Add pooling layer1') 
+                    pl = 1 
+                    co = 0
+                
+                if 'flatten' in change_name[l] and pl == 0:
+                      ml = layer_number[l]
+                      message.append('Layer '+ str(ml - 1) +' : Add pooling layer2') 
+          
+     
       #   #Global feature extraction
-        if dense_count == 2 and 'conv2D' in change_name[0] :
+      
+        if dense_count == 2 and 'conv2d' in change_name[0] :
+
             if channel == 3:
-              if dense_units[0] not in range(128,513): 
+                if dense_units[0] not in range(128,513): 
                   if dense_units[0] > 512:
                       message.append('Layer ' + str(dense_num[0]) + ' : Decrease the units in dense layer --> preferred 512 or 256 or 128') 
                       c+=1
-                  if dense_units[0] < 128:
+                  if dense_units[0] < 64:
                       message.append('Layer ' + str(dense_num[0]) + ' : Increase the units in dense layer --> preferred 512 or 256 or 128') 
                       c+=1
             if channel == 1 :
@@ -458,7 +559,7 @@ class Theia(Callback):
                               message.append('Layer ' + str(dense_num[0]) + ' : Increase the units in dense layer --> preferred 128 or 64') 
                               c+=1
                  
-        elif dense_count <= 3 and  'conv2D' in change_name[0]:
+        elif dense_count <= 3 and  'conv2d' in change_name[0]:
               if dense_units[0] >= dense_units[1]:
                   if channel == 3:
                           
@@ -494,8 +595,7 @@ class Theia(Callback):
                   
                   message.append('Layer ' + str(dense_num[0]) + ' has less units than ' + 'Layer ' + str(dense_num[1])+' : Keep the units same or decrease units while going deeper')
                   
-      
-   
+                          
                           
         # #Inaccurate number of filters
         ck =0 
@@ -552,11 +652,10 @@ class Theia(Callback):
                     
                           
                     if fil[i] not in range(8,65):
-                        print('here')
+                       
                         message.append('Layer '+str(num_layer[i])+' : Increase number of filters while going deep --> preferred between 8-64') 
                         c+=1
                     else:
-                        print('now here')
                         message.append('Layer '+str(num_layer[i])+' : Increase number of filters while going deep --> preferred between 8-64')
                         c+=1
         res = sorted(message, key = lambda x: int(x.split()[1]))

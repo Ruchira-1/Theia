@@ -13,14 +13,15 @@ class Theia_callback:
             #Data
             #For dimension and channels
             train_sample = next(iter(train_data)) 
-            image, label = train_sample  
+            image = train_sample  
             image_shape = list(image.shape)
             dimension = [image_shape[1],image_shape[2]]
             channels = image_shape[0]
-
+            image = torch.tensor(image, dtype=torch.float32)
             #For input range computation
             test_sample = next(iter(test_data)) 
-            image1, label1 = test_sample 
+            image1 = test_sample 
+            image1 = torch.tensor(image1, dtype=torch.float32)
             value1, indices = (torch.max(image[0],dim=1))
             train_upper_range = max(value1.tolist())
             value2, indices = torch.min(image[0],dim=1)
@@ -39,9 +40,6 @@ class Theia_callback:
 
             #Model
             filters = []
-            # kernel_size = []
-            # conv_strides = []
-            # pool_size = []
             units = []
             activation = []
             layer_name = []
@@ -53,10 +51,6 @@ class Theia_callback:
                     if 'Conv2d' == type(m).__name__:
                         ConvCount = ConvCount + 1
                         filters.append(m.out_channels)
-                        # kernel_size.append(m.kernel_size)
-                        # conv_strides.append(m.stride)
-                    # if 'MaxPool2d' == type(m).__name__:
-                    #     pool_size.append((m.kernel_size))
                     if 'Linear' == type(m).__name__:
                         DenseCount = DenseCount + 1
                         units.append(m.out_features)
@@ -68,10 +62,7 @@ class Theia_callback:
             learning_rate = optimizer.param_groups[0]['lr']
             loss = loss.__class__.__name__
             batch_size = batch_size
-            print('Loss is',loss)
-            print('Batch size is',batch_size)
-
-    
+           
         # #Normalization of input
             if  (train_lower_range != 0.0 and train_upper_range != 1.0) or (train_lower_range != -1.0 and train_upper_range != 1.0):
                 mes1.append('Normalize the training data')
@@ -84,7 +75,7 @@ class Theia_callback:
             #Incorrect number of filters
             ck = 0 
             j=0
-            #if check==1:
+          
             if input_type == 3:
                 for i in range(len(layer_name)):
                     if layer_name[i] == 'Conv2d' :
@@ -119,22 +110,22 @@ class Theia_callback:
             for i in layer_name:
                 if i == 'Conv2d' :
                     if 'BatchNorm2d' not in layer_name[j+1]:
-                              mes.append('Layer ' + str (j+1) + ' : Missing Batch Normalization --> Add Batch Normanlization after this layer')
+                              mes.append('Layer ' + str (j) + ' : Missing Batch Normalization --> Add Batch Normanlization after this layer')
                               c+=1
                     if layer_name[j+1] == 'ReLU' or layer_name[j+2] == 'ReLU':
                         pass
                     elif layer_name[j+1] == 'MaxPool2d':
-                        mes.append('Layer ' + str (j+1) + ' : Missing activation function --> Add activation function')
+                        mes.append('Layer ' + str (j) + ' : Missing activation function --> Add activation function')
                         c+=1
                     elif layer_name[j+1] in ('ReLU','Tanh','Sigmoid') and layer_name[j+2] in ('ReLU','Tanh','Sigmoid'):
-                        mes.append('Layer ' + str(j+2) +' : Multiple activations ')
+                        mes.append('Layer ' + str(j+1) +' : Multiple activations ')
                         c+=1
                     else:
                         mes.append('Layer ' + str(j+1) +' : Change activation function --> preferred ReLU')
                         c+=1
-                elif i == 'Conv1d' or i == 'Linear' and j<len(layer_name)-1:
-                    if 'BatchNorm1d' not in layer_name[j+1]:
-                              mes.append('Layer ' + str (j+1) + ' : Missing Batch Normalization --> Add Batch Normanlization after this layer')
+                elif i == 'Conv1d' or i == 'Linear' and j<len(layer_name)-2:
+                    if ('BatchNorm1d' or 'BatchNorm2d')  not in layer_name[j+1]:
+                              mes.append('Layer ' + str (j) + ' : Missing Batch Normalization --> Add Batch Normanlization after this layer')
                               c+=1
                 
                 j+=1
@@ -175,42 +166,7 @@ class Theia_callback:
                     elif dr ==0: 
                             mes.append('Layer ' + str(j-1) +' : Missing Dropout --> Add Dropout')
                             c+=1
-                if  'Conv2d' in layer_name[i]:
-                    print('Thus is i',i)
-                    j=i+1
-                    dr = 0
-                    while  'MaxPool2d' not in layer_name[j]:
-                            
-                            if 'Dropout' in layer_name[j]:
-                                dr+=1
-                            # if 'flatten' in layer_name[j]:
-                            #     break     
-                            j+=1
-                    
-                    if dr >= 1 and 'Dropout' in layer_name[j+1] :
-                            mes.append('Layer ' + str(j+1) +' : Redundant Dropout --> Remove Dropout')
-                            c+=1
-                    elif dr ==0 and 'Dropout' not in layer_name[j]: 
-                            mes.append('Layer ' + str(j) +' : Missing Dropout --> Add Dropout')
-                            c+=1
-                if  'Conv1d' in layer_name[i]:
-                    
-                    j=i+1
-                    dr = 0
-                    while  'MaxPool1d' not in layer_name[j]:
-                            
-                            if 'Dropout' in layer_name[j]:
-                                dr+=1
-                            # if 'Flatten' in layer_name[j]:
-                            #     break     
-                            # j+=1
-                    
-                    if dr >= 1 and 'Dropout' in layer_name[j-1] :
-                            mes.append('Layer ' + str(j-1) +' : Redundant Dropout --> Remove Dropout *')
-                            c+=1
-                    elif dr ==0 and 'Dropout' not in layer_name[j]: 
-                            mes.append('Layer ' + str(j) +' : Missing Dropout --> Add Dropout **')
-                            c+=1
+
                 i=j+1 
 
             
@@ -278,25 +234,25 @@ class Theia_callback:
             last_layer = layer_name[-1]
             if no_of_classes == 1 and problem_type==0:
                 if  last_layer == 'Sigmoid' or last_layer == 'Softmax':
-                    mes.append('Layer ' + str(len(layer_name)-1) + ' : Regression Problem --> Remove activation ')
+                    mes.append('Layer ' + str(len(layer_name)) + ' : Regression Problem --> Remove activation ')
                     c+=1
             if no_of_classes == 1 and problem_type==1:
                 if loss == 'BCELoss' and last_layer != 'Sigmoid':
-                    mes.append('Layer ' + str(len(layer_name)-1) + ' : Change loss function to BCEWithLogitsLoss or add Sigmoid as last layer activation')
+                    mes.append('Layer ' + str(len(layer_name)) + ' : Change loss function to BCEWithLogitsLoss or add Sigmoid as last layer activation')
                     c+=1
                 elif loss == 'BCEWithLogitsLoss' and last_layer in ('Sigmoid','Softmax'):
-                    mes.append('Layer ' + str(len(layer_name)-1) + ' : BCEWithLogitsLoss has in-build sigmoid activation, remove last layer activation')
+                    mes.append('Layer ' + str(len(layer_name)) + ' : BCEWithLogitsLoss has in-build sigmoid activation, remove last layer activation')
                     c+=1   
                 else:
                     mes1.append('Binary classification change loss function --> use BCELoss or BCEWithLogitsLoss')
                     c+=1 
-            if no_of_classes >2 and problem_type==1:
+            if no_of_classes >=2 and problem_type==1:
                 if loss == 'CrossEntropyLoss' and last_layer in ('Sigmoid','Softmax'):
-                    mes.append('Layer ' + str(len(layer_name)-1) + ' : CrossEntropyLoss has in-build softmax activation, remove last layer activation')
+                    mes.append('Layer ' + str(len(layer_name)) + ' : CrossEntropyLoss has in-build softmax activation, remove last layer activation')
                     c+=1
                 elif loss != 'CrossEntropyLoss' and last_layer in ('Sigmoid','Softmax'):
                     mes1.append('Multi-class classification change loss function --> use CrossEntropyLoss')
-                    mes.append('Layer ' + str(len(layer_name)-1) + ' : Remove last layer activation')
+                    mes.append('Layer ' + str(len(layer_name)) + ' : Remove last layer activation')
                     c+=1
                 elif loss == 'CrossEntropyLoss':
                     pass
