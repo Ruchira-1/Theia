@@ -10,7 +10,7 @@ This repository contains the source code of Theia, a benchmark used for empirica
     ├── Instructions.txt                   # Intructions for using Theia
     └── requirements.txt                   # Dependency and Python virutal environment information
 ├── buggy_models_with_patch                # Contains original buggy programs and patch/fix suggested by Theia and NeuraLint
-├── correct_models_with_patch              # Contains correct programs and patch/fix suggested by Theia and NeuraLint
+├── normal_models_with_patch               # Contains normal programs and patch/fix suggested by Theia and NeuraLint
 ├── 105_mapping_posts.xlsx                 # Contains posts used for mapping dataset characteristics with structural bugs
 └── Manual_Labeling_for_Mapping.xlsx       # Contains the labels from the first round and the final labels.
 ```
